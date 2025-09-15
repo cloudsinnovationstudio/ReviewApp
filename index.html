@@ -37,6 +37,12 @@
             animation: spin 1s linear infinite; margin: 40px auto;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* --- HOVER STYLES --- */
+        #app nav button:not([style*="var(--accent-color)"]):hover, #dropdown-menu a:hover {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
     </style>
 </head>
 <body class="h-full flex flex-col">
@@ -416,11 +422,14 @@
         
         async function claimReward(rewardId) {
             const docRef = doc(db, "metadata", "claimedRewards");
-            await updateDoc(docRef, { ids: arrayUnion(rewardId) });
+            // Use setDoc with merge:true to create the document if it doesn't exist, or update it if it does.
+            await setDoc(docRef, { ids: arrayUnion(rewardId) }, { merge: true });
         }
 
         async function undoLastClaim() {
-            const lastClaimedId = state.claimedRewardIds[state.claimedRewardIds.length - 1];
+            const claimedIds = [...state.claimedRewardIds];
+            if (claimedIds.length === 0) return;
+            const lastClaimedId = claimedIds[claimedIds.length - 1];
             if (lastClaimedId) {
                 state.recentlyClaimed.push(lastClaimedId);
                 const docRef = doc(db, "metadata", "claimedRewards");
@@ -459,11 +468,15 @@
 
                 // Page-specific button clicks
                 if (state.currentPage === 'rewards') {
-                    if (e.target.matches('.claim-btn')) claimReward(e.target.dataset.rewardId);
-                    if (e.target.matches('#undo-btn')) undoLastClaim();
+                    const claimBtn = e.target.closest('.claim-btn');
+                    if (claimBtn) claimReward(claimBtn.dataset.rewardId);
+                    
+                    const undoBtn = e.target.closest('#undo-btn');
+                    if (undoBtn) undoLastClaim();
                 }
                 if (state.currentPage === 'logs') {
-                    if (e.target.matches('.delete-log-btn')) deleteReviewLog(e.target.dataset.reviewId);
+                    const deleteBtn = e.target.closest('.delete-log-btn');
+                    if (deleteBtn) deleteReviewLog(deleteBtn.dataset.reviewId);
                 }
                 if (state.currentPage === 'history') {
                     if (e.target.matches('#history-weekly-btn')) renderWeeklyHistory();
