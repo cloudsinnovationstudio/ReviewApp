@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar Review Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #111827; --bg-secondary: #1f2937; --bg-tertiary: #374151;
+            --text-primary: #d1d5db; --text-secondary: #9ca3af; --border-color: #4b5563;
+            --accent-color: #4f46e5; --accent-hover: #4338ca;
+        }
+        html[data-theme="light"] {
+            --bg-primary: #f3f4f6; --bg-secondary: #ffffff; --bg-tertiary: #e5e7eb;
+            --text-primary: #1f2937; --text-secondary: #4b5563; --border-color: #d1d5db;
+            --accent-color: #4f46e5; --accent-hover: #4338ca;
+        }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-primary); 
+            color: var(--text-primary);
+        }
+        .page { transition: opacity 0.3s ease-in-out; }
+        @keyframes highlight-fade {
+            from { background-color: #fefcbf; }
+            to { background-color: var(--bg-tertiary); }
+        }
+        .highlight-undo { animation: highlight-fade 2s ease-out forwards; }
+        .loader {
+            border: 4px solid var(--bg-tertiary); border-top: 4px solid var(--accent-color);
+            border-radius: 50%; width: 32px; height: 32px;
+            animation: spin 1s linear infinite; margin: 40px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="h-full flex flex-col">
+
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="fixed top-0 left-0 w-full h-full bg-black/80 flex justify-center items-center z-50">
+        <div class="p-8 rounded-lg shadow-xl text-center w-full max-w-sm border" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+            <h2 class="text-xl font-bold mb-4" style="color: var(--text-primary);">Review Tracker Login</h2>
+            <input type="email" id="email-input" class="p-2 border rounded-md w-full mb-2" style="background-color: var(--bg-tertiary); border-color: var(--border-color);" placeholder="Email">
+            <input type="password" id="password-input" class="p-2 border rounded-md w-full mb-4" style="background-color: var(--bg-tertiary); border-color: var(--border-color);" placeholder="Password">
+            <button id="login-submit" class="text-white px-6 py-2 rounded-md shadow w-full" style="background-color: var(--accent-color); hover:background-color: var(--accent-hover);">Login</button>
+            <p id="login-error" class="text-red-400 mt-2 text-sm h-4"></p>
+        </div>
+    </div>
+
+    <!-- Main App Container (hidden until logged in) -->
+    <div id="app" class="h-full flex flex-col" style="display: none;">
+        <!-- Header Navigation -->
+        <header class="shadow-md" style="background-color: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <nav class="flex space-x-2 sm:space-x-4">
+                        <button id="nav-dashboard" class="px-3 py-2 rounded-md text-sm font-medium">Dashboard</button>
+                        <button id="nav-log" class="px-3 py-2 rounded-md text-sm font-medium">Add Review</button>
+                        <button id="nav-rewards" class="px-3 py-2 rounded-md text-sm font-medium">Rewards</button>
+                    </nav>
+                    <div class="flex items-center space-x-3">
+                         <div class="relative">
+                            <button id="menu-button" class="p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-white" style="color: var(--text-secondary); hover:background-color: var(--bg-tertiary);">
+                                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
+                            </button>
+                            <div id="dropdown-menu" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 focus:outline-none hidden" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);" role="menu">
+                                <a href="#" id="nav-history" class="block px-4 py-2 text-sm" role="menuitem">History</a>
+                                <a href="#" id="nav-logs" class="block px-4 py-2 text-sm" role="menuitem">Logs</a>
+                                <a href="#" id="nav-cost-analysis" class="block px-4 py-2 text-sm" role="menuitem">Cost Analysis</a>
+                            </div>
+                        </div>
+                        <button id="logout-button" class="bg-red-600 text-white px-3 py-1.5 rounded-md shadow hover:bg-red-700 text-xs font-semibold">Logout</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow overflow-y-auto">
+            <div id="main-content" class="max-w-5xl mx-auto py-6 sm:px-6 lg:px-8">
+                 <div id="loading" class="text-center p-8">
+                    <div class="loader"></div>
+                    <p style="color: var(--text-secondary);">Loading Data...</p>
+                </div>
+                <!-- Pages will be injected here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Templates for each page -->
+    <template id="dashboard-page-template">
+        <div class="space-y-6">
+            <div class="shadow-lg rounded-xl p-6" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
+                <div class="flex justify-between items-center border-b pb-3 mb-4" style="border-color: var(--border-color);"><h2 class="text-xl font-bold">This Week's Summary</h2><span id="weekly-total" class="text-lg font-bold py-1 px-3 rounded-full" style="background-color: var(--bg-tertiary);"></span></div>
+                <div id="weekly-summary" class="space-y-3"><p style="color: var(--text-secondary);">No reviews logged for this week yet.</p></div>
+            </div>
+            <div class="shadow-lg rounded-xl p-6" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
+                <div class="flex justify-between items-center border-b pb-3 mb-4" style="border-color: var(--border-color);"><h2 class="text-xl font-bold">Last Week's Summary</h2><span id="previous-weekly-total" class="text-lg font-bold py-1 px-3 rounded-full" style="background-color: var(--bg-tertiary);"></span></div>
+                <div id="previous-weekly-summary" class="space-y-3"><p style="color: var(--text-secondary);">No reviews logged for last week.</p></div>
+            </div>
+        </div>
+    </template>
+
+    <template id="log-page-template">
+         <div class="shadow-lg rounded-xl p-6" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
+            <h1 class="text-xl font-bold mb-4">Log Team Reviews</h1>
+            <form id="review-form" class="space-y-4">
+                <div class="relative" id="log-team-member-search-container"></div>
+                <div>
+                    <label for="review-date" class="block text-sm font-medium" style="color: var(--text-secondary);">Date of Review</label>
+                    <input type="date" id="review-date" required class="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none sm:text-sm" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
+                </div>
+                <div>
+                    <label for="review-count" class="block text-sm font-medium" style="color: var(--text-secondary);">Number of Reviews</label>
+                    <input type="number" id="review-count" value="1" min="1" required class="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none sm:text-sm" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white" style="background-color: var(--accent-color);">Add Review</button>
+                </div>
+            </form>
+        </div>
+    </template>
+    
+    <template id="rewards-page-template">
+        <div class="shadow-lg rounded-xl p-6" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
+            <div class="flex justify-between items-center border-b pb-3 mb-4" style="border-color: var(--border-color);">
+                <h1 class="text-xl font-bold">Claimable Rewards</h1>
+                <div id="undo-container"></div>
+            </div>
+            <div id="rewards-list" class="space-y-3"><p style="color: var(--text-secondary);">No rewards to be claimed.</p></div>
+        </div>
+    </template>
+
+    <template id="history-page-template">
+         <div class="shadow-lg rounded-xl p-6" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
+            <h1 class="text-xl font-bold border-b pb-3 mb-4" style="border-color: var(--border-color);">History</h1>
+            <div class="space-y-4">
+                <p class="text-sm" style="color: var(--text-secondary);">Select an option to view historical data.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <button id="history-weekly-btn" class="w-full justify-center py-2.5 px-4 border rounded-md shadow-sm text-sm font-medium focus:outline-none" style="border-color: var(--border-color); background-color: var(--bg-primary);">View Weekly History</button>
+                    <button id="history-team-btn" class="w-full justify-center py-2.5 px-4 border rounded-md shadow-sm text-sm font-medium focus:outline-none" style="border-color: var(--border-color); background-color: var(--bg-primary);">View Team History</button>
+                </div>
+            </div>
+            <div id="history-content" class="mt-6"></div>
+        </div>
+    </template>
+    
+    <template id="logs-page-template">
+        <div class="shadow-lg rounded-xl p-6" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
+            <h1 class="text-xl font-bold border-b pb-3 mb-4" style="border-color: var(--border-color);">Review Logs</h1>
+            <div id="logs-list" class="space-y-2"><p style="color: var(--text-secondary);">No reviews logged.</p></div>
+        </div>
+    </template>
+
+    <template id="cost-analysis-page-template">
+        <div class="shadow-lg rounded-xl p-6" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
+            <h1 class="text-xl font-bold border-b pb-3 mb-4" style="border-color: var(--border-color);">Cost & Performance Analysis</h1>
+            <div id="cost-analysis-content" class="space-y-6"></div>
+        </div>
+    </template>
+
+
+    <!-- Success Notification -->
+    <div id="notification" class="fixed bottom-5 right-5 text-white py-2 px-4 rounded-lg shadow-xl transition-opacity duration-300 opacity-0 pointer-events-none" style="background-color: var(--accent-color);"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- IMPORTANT: PASTE YOUR FIREBASE CONFIGURATION HERE ---
+        const firebaseConfig = {
+            apiKey: "AIza...",
+            authDomain: "your-project-id.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project-id.appspot.com",
+            messagingSenderId: "...",
+            appId: "1:..."
+        };
+
+        // --- App State & Firebase Instances ---
+        let db, auth, userId;
+        let state = {
+            reviews: [],
+            claimedRewardIds: [],
+            currentPage: 'dashboard',
+            recentlyClaimed: []
+        };
+        let dataListenersAttached = false;
+
+        // --- DOM Elements ---
+        const loginOverlay = document.getElementById('login-overlay');
+        const appContainer = document.getElementById('app');
+        const mainContent = document.getElementById('main-content');
+        const loadingDiv = document.getElementById('loading');
+        const notification = document.getElementById('notification');
+        const menuButton = document.getElementById('menu-button');
+        const dropdownMenu = document.getElementById('dropdown-menu');
+
+        // --- Main App Initialization ---
+        function main() {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            setupGlobalEventListeners();
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    userId = user.uid;
+                    loginOverlay.style.display = 'none';
+                    appContainer.style.display = 'flex';
+                    if (!dataListenersAttached) {
+                        setupDataListeners();
+                        dataListenersAttached = true;
+                    }
+                } else {
+                    userId = null;
+                    dataListenersAttached = false;
+                    loginOverlay.style.display = 'flex';
+                    appContainer.style.display = 'none';
+                    mainContent.innerHTML = ''; 
+                }
+            });
+        }
+        
+        // --- Data Listeners ---
+        function setupDataListeners() {
+            onSnapshot(collection(db, "reviews"), (snapshot) => {
+                state.reviews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                render(); 
+            });
+
+            onSnapshot(doc(db, "metadata", "claimedRewards"), (doc) => {
+                state.claimedRewardIds = doc.exists() ? doc.data().ids || [] : [];
+                render();
+            });
+        }
+
+        // --- Core Render Function ---
+        function render() {
+            if (!userId) return;
+            loadingDiv.style.display = 'none';
+            mainContent.innerHTML = '';
+
+            const template = document.getElementById(`${state.currentPage}-page-template`);
+            if (template) {
+                mainContent.appendChild(template.content.cloneNode(true));
+                // Call page-specific render functions
+                if (state.currentPage === 'dashboard') renderDashboard();
+                if (state.currentPage === 'log') renderLogPage();
+                if (state.currentPage === 'rewards') renderRewardsPage();
+                if (state.currentPage === 'logs') renderLogsPage();
+                if (state.currentPage === 'cost-analysis') renderCostAnalysisPage();
+            }
+            updateNavButtons();
+        }
+        
+        // --- Navigation Logic ---
+        function navigate(page) {
+            state.currentPage = page;
+            dropdownMenu.classList.add('hidden');
+            render();
+        }
+
+        function updateNavButtons() {
+            const navButtons = document.querySelectorAll('#app nav button, #app #dropdown-menu a');
+            navButtons.forEach(button => {
+                const pageName = button.id.replace('nav-', '');
+                const isActive = state.currentPage === pageName;
+                button.style.backgroundColor = isActive ? 'var(--accent-color)' : '';
+                button.style.color = isActive ? 'white' : 'var(--text-secondary)';
+            });
+        }
+
+        // --- Page Specific Renderers ---
+        // (These functions are simplified for brevity but would contain the same logic as before)
+        function renderDashboard() {
+            const weeklySummaryDiv = document.getElementById('weekly-summary');
+            const weeklyTotalSpan = document.getElementById('weekly-total');
+            const previousWeeklySummaryDiv = document.getElementById('previous-weekly-summary');
+            const previousWeeklyTotalSpan = document.getElementById('previous-weekly-total');
+            
+            const today = new Date();
+            const currentWeek = getWeekNumber(today);
+            const currentYear = today.getFullYear();
+            const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const previousWeek = getWeekNumber(sevenDaysAgo);
+            const previousWeekYear = sevenDaysAgo.getFullYear();
+            
+            const reviewsByTeam = {};
+            state.reviews.forEach(review => {
+                const reviewDate = new Date(review.date);
+                if (!reviewsByTeam[review.name]) reviewsByTeam[review.name] = { name: review.name, weekly: 0, previousWeekly: 0 };
+                if (getWeekNumber(reviewDate) === currentWeek && reviewDate.getFullYear() === currentYear) reviewsByTeam[review.name].weekly += review.count;
+                if (getWeekNumber(reviewDate) === previousWeek && reviewDate.getFullYear() === previousWeekYear) reviewsByTeam[review.name].previousWeekly += review.count;
+            });
+
+            const teamArray = Object.values(reviewsByTeam);
+            weeklyTotalSpan.textContent = `Total: ${teamArray.reduce((s, t) => s + t.weekly, 0)}`;
+            previousWeeklyTotalSpan.textContent = `Total: ${teamArray.reduce((s, t) => s + t.previousWeekly, 0)}`;
+
+            const renderSummary = (div, contenders, periodText) => {
+                div.innerHTML = contenders.length === 0 ? `<p style="color: var(--text-secondary);">No reviews logged for ${periodText}.</p>` : '';
+                contenders.forEach(team => {
+                    let rewardText = "", rewardClass = "";
+                    const count = periodText === 'this week' ? team.weekly : team.previousWeekly;
+                    if (count >= 25) { rewardText = "£50 Voucher"; rewardClass = "bg-yellow-400 text-yellow-900"; }
+                    else if (count >= 15) { rewardText = "Bottle of Spirit"; rewardClass = "bg-blue-400 text-blue-900"; }
+                    else if (count >= 10) { rewardText = "Bottle of Wine"; rewardClass = "bg-red-400 text-red-900"; }
+                    div.innerHTML += `<div class="flex items-center justify-between p-3 rounded-lg" style="background-color: var(--bg-tertiary);"><div><p class="font-semibold">${team.name}</p><p class="text-sm" style="color: var(--text-secondary);">${count} reviews ${periodText}</p></div>${rewardText ? `<span class="text-xs font-bold py-1 px-3 rounded-full ${rewardClass}">${rewardText}</span>` : ''}</div>`;
+                });
+            }
+
+            renderSummary(weeklySummaryDiv, teamArray.filter(t => t.weekly > 0).sort((a,b) => b.weekly - a.weekly), 'this week');
+            renderSummary(previousWeeklySummaryDiv, teamArray.filter(t => t.previousWeekly > 0).sort((a,b) => b.previousWeekly - a.previousWeekly), 'last week');
+        }
+
+        function renderLogPage() {
+            createSearchableDropdown('log-team-member-search-container', 'Team Member Name', 'team-member-search', () => {});
+            document.getElementById('review-date').valueAsDate = new Date();
+        }
+
+        function renderRewardsPage() {
+            const rewardsListDiv = document.getElementById('rewards-list');
+            const undoContainer = document.getElementById('undo-container');
+            const unclaimed = generateAllEarnedRewards().filter(r => !state.claimedRewardIds.includes(r.id));
+            rewardsListDiv.innerHTML = unclaimed.length === 0 ? `<p style="color: var(--text-secondary);">No rewards to be claimed.</p>` : '';
+            unclaimed.forEach(reward => {
+                const isHighlighted = state.recentlyClaimed.includes(reward.id);
+                rewardsListDiv.innerHTML += `<div class="flex items-center justify-between p-4 rounded-lg ${isHighlighted ? 'highlight-undo' : ''}" style="background-color: var(--bg-tertiary);" data-reward-id-display="${reward.id}"><div class="flex-grow"><p class="font-bold" style="color: var(--accent-color);">${reward.reward}</p><p class="text-sm font-semibold">${reward.name}</p><p class="text-xs" style="color: var(--text-secondary);">${reward.type} Reward for ${reward.period}</p></div><button class="claim-btn ml-4 px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white" style="background-color: var(--accent-color);" data-reward-id="${reward.id}">Claim</button></div>`;
+            });
+            if (state.recentlyClaimed.length > 0) setTimeout(() => { state.recentlyClaimed = []; }, 2000);
+            
+            if (state.claimedRewardIds.length > 0) {
+                undoContainer.innerHTML = `<button id="undo-btn" class="text-sm font-medium" style="color: var(--accent-color);">Undo Last Claim</button>`;
+            } else {
+                undoContainer.innerHTML = '';
+            }
+        }
+        
+        function renderLogsPage() {
+             const logsListDiv = document.getElementById('logs-list');
+             logsListDiv.innerHTML = state.reviews.length === 0 ? `<p style="color: var(--text-secondary);">No reviews have been logged yet.</p>` : '';
+            [...state.reviews].sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0)).forEach(review => {
+                logsListDiv.innerHTML += `<div class="flex items-center justify-between p-2 rounded-lg text-sm" style="background-color: var(--bg-tertiary);"><p><span class="font-semibold">${review.name}</span> logged <span class="font-bold" style="color: var(--accent-color);">${review.count}</span> reviews for <span style="color: var(--text-secondary);">${new Date(review.date).toLocaleDateString('en-GB')}</span></p><button class="delete-log-btn text-red-500 hover:text-red-700 font-bold px-2" data-review-id="${review.id}">&times;</button></div>`;
+            });
+        }
+        
+        function renderCostAnalysisPage() {
+            // This function remains largely the same, but it uses the state.reviews from Firestore
+            const contentDiv = document.getElementById('cost-analysis-content');
+            if(!contentDiv) return;
+            const REWARD_COSTS = { 'Free Meal': 8, 'Bottle of Wine': 10, 'Bottle of Spirit': 25, '£50 Amazon Voucher': 50 };
+            const allEarned = generateAllEarnedRewards();
+            const totalReviews = state.reviews.reduce((sum, r) => sum + r.count, 0);
+            const uniqueWeeksWithReviews = [...new Set(state.reviews.map(r => `${new Date(r.date).getFullYear()}-W${getWeekNumber(new Date(r.date))}`))];
+            const weekCount = uniqueWeeksWithReviews.length || 1;
+            const avgReviewsPerWeek = (totalReviews / weekCount).toFixed(1);
+            const avgRewardsPerWeek = (allEarned.length / weekCount).toFixed(1);
+            const totalCost = allEarned.reduce((sum, r) => sum + (REWARD_COSTS[r.reward] || 0), 0);
+            const avgCostPerWeek = (totalCost / weekCount).toFixed(2);
+            const costByReward = {};
+            allEarned.forEach(r => {
+                const cost = REWARD_COSTS[r.reward] || 0;
+                costByReward[r.reward] = (costByReward[r.reward] || 0) + cost;
+            });
+            contentDiv.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <div class="p-4 rounded-lg" style="background-color: var(--bg-tertiary);"><p class="text-3xl font-bold" style="color: var(--accent-color);">${avgReviewsPerWeek}</p><p class="text-sm" style="color: var(--text-secondary);">Avg. Reviews / Week</p></div>
+                    <div class="p-4 rounded-lg" style="background-color: var(--bg-tertiary);"><p class="text-3xl font-bold" style="color: var(--accent-color);">${avgRewardsPerWeek}</p><p class="text-sm" style="color: var(--text-secondary);">Avg. Rewards / Week</p></div>
+                    <div class="p-4 rounded-lg" style="background-color: var(--bg-tertiary);"><p class="text-3xl font-bold" style="color: var(--accent-color);">£${avgCostPerWeek}</p><p class="text-sm" style="color: var(--text-secondary);">Avg. Cost / Week</p></div>
+                </div>
+                <div class="p-4 rounded-lg" style="background-color: var(--bg-tertiary);">
+                    <h3 class="font-bold text-lg text-center mb-3">Total Reward Cost Breakdown (£${totalCost})</h3>
+                    <div class="relative h-64 mx-auto" style="max-width: 300px;"><canvas id="cost-chart"></canvas></div>
+                </div>`;
+            const chartCtx = document.getElementById('cost-chart').getContext('2d');
+            new Chart(chartCtx, { type: 'doughnut', data: { labels: Object.keys(costByReward), datasets: [{ data: Object.values(costByReward), backgroundColor: ['#a78bfa', '#f87171', '#60a5fa', '#facc15'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+        }
+
+
+        // --- Firestore Actions ---
+        async function handleAddReview(e) {
+            e.preventDefault();
+            const name = document.getElementById('team-member-search-input').value.trim();
+            const date = document.getElementById('review-date').value;
+            const count = parseInt(document.getElementById('review-count').value, 10);
+            if (!name || !date || !count) return;
+            
+            await addDoc(collection(db, "reviews"), {
+                name: name.split(' ').map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()).join(' '),
+                date: date,
+                count: count,
+                timestamp: new Date()
+            });
+            showNotification('Review log added!');
+            e.target.reset();
+            renderLogPage(); // Re-render to clear dropdown
+        }
+        
+        async function claimReward(rewardId) {
+            const docRef = doc(db, "metadata", "claimedRewards");
+            await updateDoc(docRef, { ids: arrayUnion(rewardId) });
+        }
+
+        async function undoLastClaim() {
+            const lastClaimedId = state.claimedRewardIds[state.claimedRewardIds.length - 1];
+            if (lastClaimedId) {
+                state.recentlyClaimed.push(lastClaimedId);
+                const docRef = doc(db, "metadata", "claimedRewards");
+                await updateDoc(docRef, { ids: arrayRemove(lastClaimedId) });
+            }
+        }
+
+        async function deleteReviewLog(reviewId) {
+            await deleteDoc(doc(db, "reviews", reviewId));
+        }
+
+        // --- Event Listeners Setup ---
+        function setupGlobalEventListeners() {
+             document.getElementById('login-submit').addEventListener('click', async () => {
+                const email = document.getElementById('email-input').value;
+                const password = document.getElementById('password-input').value;
+                const loginError = document.getElementById('login-error');
+                loginError.textContent = '';
+                try {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } catch (error) {
+                    loginError.textContent = 'Login failed. Please check credentials.';
+                }
+            });
+
+            document.getElementById('logout-button').addEventListener('click', () => signOut(auth));
+            menuButton.addEventListener('click', () => dropdownMenu.classList.toggle('hidden'));
+            
+            document.addEventListener('click', (e) => {
+                if (!menuButton.contains(e.target) && !dropdownMenu.contains(e.target)) dropdownMenu.classList.add('hidden');
+                
+                // Navigation clicks
+                const navTarget = e.target.closest('button[id^="nav-"], a[id^="nav-"]');
+                if (navTarget) navigate(navTarget.id.replace('nav-', ''));
+
+                // Page-specific button clicks
+                if (state.currentPage === 'rewards') {
+                    if (e.target.matches('.claim-btn')) claimReward(e.target.dataset.rewardId);
+                    if (e.target.matches('#undo-btn')) undoLastClaim();
+                }
+                if (state.currentPage === 'logs') {
+                    if (e.target.matches('.delete-log-btn')) deleteReviewLog(e.target.dataset.reviewId);
+                }
+                if (state.currentPage === 'history') {
+                    if (e.target.matches('#history-weekly-btn')) renderWeeklyHistory();
+                    if (e.target.matches('#history-team-btn')) renderTeamHistorySelector();
+                }
+            });
+
+            document.addEventListener('submit', (e) => {
+                if (e.target.id === 'review-form') handleAddReview(e);
+            });
+        }
+        
+        // --- Utility & Helper Functions (Many are the same as before) ---
+        function generateAllEarnedRewards() {
+            // This function remains the same, calculating rewards from state.reviews
+            const earnedRewards = [], reviewsByDay = {}, reviewsByWeek = {};
+            state.reviews.forEach(review => {
+                const d = new Date(review.date), y = d.getFullYear(), w = getWeekNumber(d);
+                const dayKey = `${review.name}-${review.date}`, weekKey = `${review.name}-${y}-${w}`;
+                reviewsByDay[dayKey] = (reviewsByDay[dayKey] || 0) + review.count;
+                reviewsByWeek[weekKey] = (reviewsByWeek[weekKey] || 0) + review.count;
+            });
+            for (const key in reviewsByDay) {
+                const [name, dateString] = key.split(/-(.*)/s);
+                const count = reviewsByDay[key], dayOfWeek = new Date(dateString).getDay();
+                if ((dayOfWeek === 6 && count >= 10) || (dayOfWeek !== 6 && count >= 4)) {
+                    earnedRewards.push({id: `${name}-${dateString}-daily-meal`, name, period: new Date(dateString).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }), type: 'Daily', reward: 'Free Meal'});
+                }
+            }
+            for (const key in reviewsByWeek) {
+                const [name, year, week] = key.split('-');
+                const count = reviewsByWeek[key];
+                let info = null;
+                if (count >= 25) info = { reward: '£50 Amazon Voucher', id_suffix: 'voucher' };
+                else if (count >= 15) info = { reward: 'Bottle of Spirit', id_suffix: 'spirit' };
+                else if (count >= 10) info = { reward: 'Bottle of Wine', id_suffix: 'wine' };
+                if (info) earnedRewards.push({id: `${name}-${year}-W${week}-weekly-${info.id_suffix}`, name, period: `Week ${week}, ${year}`, type: 'Weekly', reward: info.reward});
+            }
+            return earnedRewards;
+        }
+
+        function renderWeeklyHistory() {
+            const historyContent = document.getElementById('history-content');
+            if(!historyContent) return;
+             const reviewsByWeekDay = {};
+            state.reviews.forEach(review => {
+                const date = new Date(review.date);
+                const year = date.getFullYear();
+                const week = getWeekNumber(date);
+                const day = date.getUTCDay();
+                const key = `${year}-W${week}`;
+                if (!reviewsByWeekDay[key]) reviewsByWeekDay[key] = { 1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 0:0, total: 0};
+                reviewsByWeekDay[key][day] = (reviewsByWeekDay[key][day] || 0) + review.count;
+                reviewsByWeekDay[key].total += review.count;
+            });
+
+            const sortedWeeks = Object.keys(reviewsByWeekDay).sort((a,b) => b.localeCompare(a));
+            if (sortedWeeks.length === 0) { historyContent.innerHTML = `<p style="color: var(--text-secondary);">No data available.</p>`; return; }
+
+            let tableHTML = `<div class="overflow-x-auto"><table class="min-w-full"><thead style="background-color: var(--bg-tertiary);"><tr>
+                ${['Week Starting', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Total'].map(h => `<th class="px-4 py-2 text-left text-xs font-medium uppercase" style="color: var(--text-secondary);">${h}</th>`).join('')}
+                </tr></thead><tbody class="divide-y" style="border-color: var(--border-color);">`;
+            sortedWeeks.forEach(key => {
+                const [year, week] = key.split('-W');
+                const monday = getMondayOfWeek(parseInt(year), parseInt(week));
+                const data = reviewsByWeekDay[key];
+                tableHTML += `<tr class="hover:bg-opacity-50" style="background-color: var(--bg-secondary);"><td class="px-4 py-2 whitespace-nowrap text-sm font-medium">${monday.toLocaleDateString('en-GB', {day:'numeric', month:'short', year: 'numeric'})}</td>
+                    ${[1,2,3,4,5,6,0].map(day => `<td class="px-4 py-2 text-sm">${data[day] || 0}</td>`).join('')}
+                    <td class="px-4 py-2 text-sm font-bold">${data.total}</td></tr>`;
+            });
+            historyContent.innerHTML = tableHTML + '</tbody></table></div>';
+        }
+        
+        function renderTeamHistorySelector() {
+            const historyContent = document.getElementById('history-content');
+            if(!historyContent) return;
+            createSearchableDropdown('history-content', 'Select or Search for a Team Member', 'team-history-search', (name) => {
+                const resultsDiv = document.getElementById('team-history-results');
+                if (!name) { resultsDiv.innerHTML = ''; return; }
+                
+                const allRewards = generateAllEarnedRewards();
+                const teamRewards = allRewards.filter(r => r.name === name);
+                const totalReviews = state.reviews.filter(r => r.name === name).reduce((sum, r) => sum + r.count, 0);
+                const rewardCounts = { 'Free Meal': 0, 'Bottle of Wine': 0, 'Bottle of Spirit': 0, '£50 Amazon Voucher': 0 };
+                teamRewards.forEach(r => rewardCounts[r.reward]++);
+                const reviewsByWeek = {};
+                state.reviews.filter(r => r.name === name).forEach(review => {
+                    const d = new Date(review.date);
+                    const key = `${d.getFullYear()}-W${getWeekNumber(d)}`;
+                    reviewsByWeek[key] = (reviewsByWeek[key] || 0) + review.count;
+                });
+                
+                resultsDiv.innerHTML = `
+                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="p-4 rounded-lg" style="background-color: var(--bg-tertiary);"><h3 class="font-bold text-lg mb-3">Performance Overview</h3><div class="text-center mb-4"><p class="text-5xl font-bold" style="color: var(--accent-color);">${totalReviews}</p><p class="text-sm" style="color: var(--text-secondary);">Total Reviews All Time</p></div><h4 class="font-semibold mb-2">Rewards Earned</h4><div class="space-y-1 text-sm">${Object.keys(rewardCounts).map(reward => `<div class="flex justify-between"><span style="color: var(--text-secondary);">${reward}</span><span class="font-bold">${rewardCounts[reward]}</span></div>`).join('')}</div></div>
+                        <div class="p-4 rounded-lg" style="background-color: var(--bg-tertiary);"><h3 class="font-bold text-lg mb-3">Weekly Review Trend</h3><canvas id="team-chart"></canvas></div>
+                    </div>`;
+
+                setTimeout(() => {
+                    const sortedWeeks = Object.keys(reviewsByWeek).sort().slice(-8);
+                    const chartCtx = document.getElementById('team-chart');
+                    if(chartCtx) { new Chart(chartCtx.getContext('2d'), { type: 'bar', data: { labels: sortedWeeks.map(w => getMondayOfWeek(...w.split('-W').map(Number)).toLocaleDateString('en-GB', {day: '2-digit', month: '2-digit'})), datasets: [{ label: 'Reviews per Week', data: sortedWeeks.map(w => reviewsByWeek[w]), backgroundColor: 'rgba(79, 70, 229, 0.7)', borderColor: 'rgba(79, 70, 229, 1)', borderWidth: 1 }] }, options: { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } }); }
+                }, 0);
+             }, 'team-history-results');
+        }
+
+        function createSearchableDropdown(containerId, labelText, inputId, onSelect, resultsContainerId) {
+            const container = document.getElementById(containerId);
+            if(!container) return;
+            container.innerHTML = `<label for="${inputId}-input" class="block text-sm font-medium" style="color: var(--text-secondary);">${labelText}</label><div class="relative mt-1"><input type="text" id="${inputId}-input" class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none sm:text-sm" style="background-color: var(--bg-tertiary); border-color: var(--border-color);" placeholder="Start typing..."><div id="${inputId}-list" class="absolute z-10 w-full mt-1 border rounded-md shadow-lg hidden max-h-60 overflow-y-auto" style="background-color: var(--bg-secondary); border-color: var(--border-color);"></div></div>${resultsContainerId ? `<div id="${resultsContainerId}"></div>` : ''}`;
+            const input = document.getElementById(`${inputId}-input`), list = document.getElementById(`${inputId}-list`);
+            const uniqueNames = [...new Set(state.reviews.map(r => r.name))].sort();
+            const updateList = () => {
+                const filter = input.value.toLowerCase();
+                const filteredNames = uniqueNames.filter(name => name.toLowerCase().includes(filter));
+                list.innerHTML = filteredNames.map(name => `<div class="cursor-pointer p-2 hover:bg-opacity-50" style="hover:background-color: var(--accent-color);">${name}</div>`).join('');
+                list.classList.toggle('hidden', filteredNames.length === 0);
+            };
+            input.addEventListener('input', updateList);
+            list.addEventListener('click', (e) => { if (e.target.tagName === 'DIV') { input.value = e.target.textContent; list.classList.add('hidden'); onSelect(input.value); } });
+            input.addEventListener('focus', () => { input.value = ''; if (resultsContainerId) { const res = document.getElementById(resultsContainerId); if(res) res.innerHTML = ''; } updateList(); });
+            document.addEventListener('click', (e) => { if (!container.contains(e.target)) list.classList.add('hidden'); });
+        }
+        
+        function getWeekNumber(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1)); return Math.ceil((((d - yearStart) / 86400000) + 1) / 7); }
+        function getMondayOfWeek(year, week) { const d = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7)); const day = d.getUTCDay() || 7; d.setUTCDate(d.getUTCDate() + 1 - day); return d; }
+        function showNotification(message) { notification.textContent = message; notification.classList.remove('opacity-0'); setTimeout(() => notification.classList.add('opacity-0'), 2500); }
+
+        // --- Start the App ---
+        main();
+    </script>
+</body>
+</html>
+
