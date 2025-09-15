@@ -173,15 +173,17 @@
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- IMPORTANT: PASTE YOUR FIREBASE CONFIGURATION HERE ---
         const firebaseConfig = {
-            apiKey: "AIza...",
-            authDomain: "your-project-id.firebaseapp.com",
-            projectId: "your-project-id",
-            storageBucket: "your-project-id.appspot.com",
-            messagingSenderId: "...",
-            appId: "1:..."
+          apiKey: "AIzaSyAmkS71kBraGR1TqXVwgGm4aI4zXbPoWXM",
+          authDomain: "bar-review-tracker.firebaseapp.com",
+          projectId: "bar-review-tracker",
+          storageBucket: "bar-review-tracker.firebasestorage.app",
+          messagingSenderId: "496309837782",
+          appId: "1:496309837782:web:6138be4b8c7baabf584e77"
         };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
 
         // --- App State & Firebase Instances ---
         let db, auth, userId;
