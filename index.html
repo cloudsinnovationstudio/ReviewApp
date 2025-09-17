@@ -491,7 +491,6 @@
         
         // --- Utility & Helper Functions (Many are the same as before) ---
         function generateAllEarnedRewards() {
-            // This function remains the same, calculating rewards from state.reviews
             const earnedRewards = [], reviewsByDay = {}, reviewsByWeek = {};
             state.reviews.forEach(review => {
                 const d = new Date(review.date), y = d.getFullYear(), w = getWeekNumber(d);
@@ -513,7 +512,11 @@
                 if (count >= 25) info = { reward: '£50 Amazon Voucher', id_suffix: 'voucher' };
                 else if (count >= 15) info = { reward: 'Bottle of Spirit', id_suffix: 'spirit' };
                 else if (count >= 10) info = { reward: 'Bottle of Wine', id_suffix: 'wine' };
-                if (info) earnedRewards.push({id: `${name}-${year}-W${week}-weekly-${info.id_suffix}`, name, period: `Week ${week}, ${year}`, type: 'Weekly', reward: info.reward});
+                if (info) {
+                    const monday = getMondayOfWeek(parseInt(year), parseInt(week));
+                    const periodDate = monday.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    earnedRewards.push({id: `${name}-${year}-W${week}-weekly-${info.id_suffix}`, name, period: periodDate, type: 'Weekly', reward: info.reward});
+                }
             }
             return earnedRewards;
         }
