@@ -85,7 +85,7 @@
                             <div id="dropdown-menu" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 focus:outline-none hidden" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);" role="menu">
                                 <a href="#" id="nav-history" class="block px-4 py-2 text-sm" role="menuitem">History</a>
                                 <a href="#" id="nav-logs" class="block px-4 py-2 text-sm" role="menuitem">Logs</a>
-                                <a href="#" id="nav-cost-analysis" class="block px-4 py-2 text-sm" role="menuitem">Cost Analysis</a>
+                                <!-- <a href="#" id="nav-cost-analysis" class="block px-4 py-2 text-sm" role="menuitem">Cost Analysis</a> -->
                             </div>
                         </div>
                         <button id="logout-button" class="bg-red-600 text-white px-3 py-1.5 rounded-md shadow hover:bg-red-700 text-xs font-semibold">Logout</button>
@@ -272,7 +272,7 @@
                 if (state.currentPage === 'log') renderLogPage();
                 if (state.currentPage === 'rewards') renderRewardsPage();
                 if (state.currentPage === 'logs') renderLogsPage();
-                if (state.currentPage === 'cost-analysis') renderCostAnalysisPage();
+                // if (state.currentPage === 'cost-analysis') renderCostAnalysisPage(); // Temporarily disabled
             }
             updateNavButtons();
         }
