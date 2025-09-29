@@ -192,7 +192,7 @@
 
         // --- IMPORTANT: PASTE YOUR FIREBASE CONFIGURATION HERE ---
         const firebaseConfig = {
-            apiKey: "AIzaSyDzHiAoUvEWiEfCCJdwEE6sCeYWN173gm0",
+            apiKey: "AIzaSyAmkS71kBraGR1TqXVwgGm4aI4zXbPoWXM",
             authDomain: "bar-review-tracker.firebaseapp.com",
             projectId: "bar-review-tracker",
             storageBucket: "bar-review-tracker.appspot.com",
@@ -298,6 +298,7 @@
         }
 
         // --- Page Specific Renderers ---
+        // (These functions are simplified for brevity but would contain the same logic as before)
         function renderDashboard() {
             const weeklySummaryDiv = document.getElementById('weekly-summary');
             const weeklyTotalSpan = document.getElementById('weekly-total');
@@ -328,9 +329,9 @@
                 contenders.forEach(team => {
                     let rewardText = "", rewardClass = "";
                     const count = periodText === 'this week' ? team.weekly : team.previousWeekly;
-                    if (count >= 40) { rewardText = "£50 Voucher"; rewardClass = "bg-yellow-400 text-yellow-900"; }
-                    else if (count >= 30) { rewardText = "Bottle of Wine"; rewardClass = "bg-red-400 text-red-900"; }
-                    else if (count >= 20) { rewardText = "Bottle of Prosecco"; rewardClass = "bg-green-400 text-green-900"; }
+                    if (count >= 25) { rewardText = "£50 Voucher"; rewardClass = "bg-yellow-400 text-yellow-900"; }
+                    else if (count >= 15) { rewardText = "Bottle of Spirit"; rewardClass = "bg-blue-400 text-blue-900"; }
+                    else if (count >= 10) { rewardText = "Bottle of Wine"; rewardClass = "bg-red-400 text-red-900"; }
                     div.innerHTML += `<div class="flex items-center justify-between p-3 rounded-lg" style="background-color: var(--bg-tertiary);"><div><p class="font-semibold">${team.name}</p><p class="text-sm" style="color: var(--text-secondary);">${count} reviews ${periodText}</p></div>${rewardText ? `<span class="text-xs font-bold py-1 px-3 rounded-full ${rewardClass}">${rewardText}</span>` : ''}</div>`;
                 });
             }
@@ -457,6 +458,8 @@
                 }
             });
 
+            menuButton.addEventListener('click', () => dropdownMenu.classList.toggle('hidden'));
+            
             document.addEventListener('click', (e) => {
                 if (!menuButton.contains(e.target) && !dropdownMenu.contains(e.target)) dropdownMenu.classList.add('hidden');
                 
@@ -497,8 +500,6 @@
             document.addEventListener('submit', (e) => {
                 if (e.target.id === 'review-form') handleAddReview(e);
             });
-
-            menuButton.addEventListener('click', () => dropdownMenu.classList.toggle('hidden'));
         }
         
         // --- Utility & Helper Functions (Many are the same as before) ---
@@ -513,7 +514,7 @@
             for (const key in reviewsByDay) {
                 const [name, dateString] = key.split(/-(.*)/s);
                 const count = reviewsByDay[key], dayOfWeek = new Date(dateString).getDay();
-                if ((dayOfWeek === 6 && count >= 10) || (dayOfWeek !== 6 && count >= 5)) {
+                if ((dayOfWeek === 6 && count >= 10) || (dayOfWeek !== 6 && count >= 4)) {
                     earnedRewards.push({id: `${name}-${dateString}-daily-meal`, name, period: new Date(dateString).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }), type: 'Daily', reward: 'Free Meal'});
                 }
             }
@@ -521,9 +522,9 @@
                 const [name, year, week] = key.split('-');
                 const count = reviewsByWeek[key];
                 let info = null;
-                if (count >= 40) info = { reward: '£50 Amazon Voucher', id_suffix: 'voucher' };
-                else if (count >= 30) info = { reward: 'Bottle of Wine', id_suffix: 'wine' };
-                else if (count >= 20) info = { reward: 'Bottle of Prosecco', id_suffix: 'prosecco' };
+                if (count >= 25) info = { reward: '£50 Amazon Voucher', id_suffix: 'voucher' };
+                else if (count >= 15) info = { reward: 'Bottle of Spirit', id_suffix: 'spirit' };
+                else if (count >= 10) info = { reward: 'Bottle of Wine', id_suffix: 'wine' };
                 if (info) {
                     const monday = getMondayOfWeek(parseInt(year), parseInt(week));
                     const periodDate = monday.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -575,9 +576,8 @@
                 const allRewards = generateAllEarnedRewards();
                 const teamRewards = allRewards.filter(r => r.name === name);
                 const totalReviews = state.reviews.filter(r => r.name === name).reduce((sum, r) => sum + r.count, 0);
-                const rewardCounts = { 'Free Meal': 0, 'Bottle of Prosecco': 0, 'Bottle of Wine': 0, '£50 Amazon Voucher': 0 };
-                teamRewards.forEach(r => { if(rewardCounts.hasOwnProperty(r.reward)) rewardCounts[r.reward]++; });
-
+                const rewardCounts = { 'Free Meal': 0, 'Bottle of Wine': 0, 'Bottle of Spirit': 0, '£50 Amazon Voucher': 0 };
+                teamRewards.forEach(r => rewardCounts[r.reward]++);
                 const reviewsByWeek = {};
                 state.reviews.filter(r => r.name === name).forEach(review => {
                     const d = new Date(review.date);
@@ -645,4 +645,6 @@
     </script>
 </body>
 </html>
+
+
 
