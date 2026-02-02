@@ -496,16 +496,59 @@
 
         // --- Event Listeners Setup ---
         function setupGlobalEventListeners() {
-             document.getElementById('login-submit').addEventListener('click', async () => {
-                const email = document.getElementById('email-input').value;
-                const password = document.getElementById('password-input').value;
-                const loginError = document.getElementById('login-error');
+            const loginSubmit = document.getElementById('login-submit');
+            const emailInput = document.getElementById('email-input');
+            const passwordInput = document.getElementById('password-input');
+            const loginError = document.getElementById('login-error');
+            
+            const attemptLogin = async () => {
+                const email = emailInput.value.trim();
+                const password = passwordInput.value;
                 loginError.textContent = '';
+                
+                if (!email || !password) {
+                    loginError.textContent = 'Please enter both email and password.';
+                    return;
+                }
+                
+                loginSubmit.disabled = true;
+                loginSubmit.textContent = 'Logging in...';
+                
                 try {
                     await signInWithEmailAndPassword(auth, email, password);
                 } catch (error) {
-                    loginError.textContent = 'Login failed. Please check credentials.';
+                    console.error('Login error:', error);
+                    let errorMessage = 'Login failed. ';
+                    if (error.code === 'auth/invalid-email') {
+                        errorMessage += 'Invalid email address.';
+                    } else if (error.code === 'auth/user-disabled') {
+                        errorMessage += 'This account has been disabled.';
+                    } else if (error.code === 'auth/user-not-found') {
+                        errorMessage += 'No account found with this email.';
+                    } else if (error.code === 'auth/wrong-password') {
+                        errorMessage += 'Incorrect password.';
+                    } else if (error.code === 'auth/network-request-failed') {
+                        errorMessage += 'Network error. Please check your connection.';
+                    } else if (error.code === 'auth/unauthorized-domain') {
+                        errorMessage += 'This domain is not authorized. Please add localhost to Firebase authorized domains.';
+                    } else {
+                        errorMessage += error.message || 'Please check your credentials.';
+                    }
+                    loginError.textContent = errorMessage;
+                } finally {
+                    loginSubmit.disabled = false;
+                    loginSubmit.textContent = 'Login';
                 }
+            };
+            
+            loginSubmit.addEventListener('click', attemptLogin);
+            
+            // Allow Enter key to submit
+            emailInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') passwordInput.focus();
+            });
+            passwordInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') attemptLogin();
             });
 
             menuButton.addEventListener('click', () => dropdownMenu.classList.toggle('hidden'));
