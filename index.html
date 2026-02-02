@@ -457,20 +457,75 @@
         // --- Firestore Actions ---
         async function handleAddReview(e) {
             e.preventDefault();
-            const name = document.getElementById('team-member-search-input').value.trim();
-            const date = document.getElementById('review-date').value;
-            const count = parseInt(document.getElementById('review-count').value, 10);
-            if (!name || !date || !count) return;
+            const nameInput = document.getElementById('team-member-search-input');
+            const dateInput = document.getElementById('review-date');
+            const countInput = document.getElementById('review-count');
+            const submitButton = e.target.querySelector('button[type="submit"]');
             
-            await addDoc(collection(db, "reviews"), {
-                name: name.split(' ').map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()).join(' '),
-                date: date,
-                count: count,
-                timestamp: new Date()
-            });
-            showNotification('Review log added!');
-            e.target.reset();
-            renderLogPage(); // Re-render to clear dropdown
+            if (!nameInput || !dateInput || !countInput) {
+                console.error('Form inputs not found');
+                showNotification('Error: Form inputs not found', 'error');
+                return;
+            }
+            
+            const name = nameInput.value.trim();
+            const date = dateInput.value;
+            const count = parseInt(countInput.value, 10);
+            
+            if (!name) {
+                showNotification('Please enter a team member name', 'error');
+                nameInput.focus();
+                return;
+            }
+            
+            if (!date) {
+                showNotification('Please select a date', 'error');
+                dateInput.focus();
+                return;
+            }
+            
+            if (!count || count < 1) {
+                showNotification('Please enter a valid number of reviews (at least 1)', 'error');
+                countInput.focus();
+                return;
+            }
+            
+            // Disable button during submission
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Adding...';
+            }
+            
+            try {
+                const formattedName = name.split(' ').map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()).join(' ');
+                
+                await addDoc(collection(db, "reviews"), {
+                    name: formattedName,
+                    date: date,
+                    count: count,
+                    timestamp: new Date()
+                });
+                
+                showNotification('Review log added successfully!');
+                e.target.reset();
+                renderLogPage(); // Re-render to clear dropdown
+            } catch (error) {
+                console.error('Error adding review:', error);
+                let errorMsg = 'Failed to add review. ';
+                if (error.code === 'permission-denied') {
+                    errorMsg += 'You do not have permission to add reviews. Check Firestore security rules.';
+                } else if (error.code === 'unavailable') {
+                    errorMsg += 'Service temporarily unavailable. Please try again.';
+                } else {
+                    errorMsg += error.message || 'Please try again.';
+                }
+                showNotification(errorMsg, 'error');
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Add Review';
+                }
+            }
         }
         
         async function claimReward(rewardId) {
@@ -720,7 +775,16 @@
         
         function getWeekNumber(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1)); return Math.ceil((((d - yearStart) / 86400000) + 1) / 7); }
         function getMondayOfWeek(year, week) { const d = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7)); const day = d.getUTCDay() || 7; d.setUTCDate(d.getUTCDate() + 1 - day); return d; }
-        function showNotification(message) { notification.textContent = message; notification.classList.remove('opacity-0'); setTimeout(() => notification.classList.add('opacity-0'), 2500); }
+        function showNotification(message, type = 'success') {
+            notification.textContent = message;
+            if (type === 'error') {
+                notification.style.backgroundColor = '#ef4444'; // red-500
+            } else {
+                notification.style.backgroundColor = 'var(--accent-color)';
+            }
+            notification.classList.remove('opacity-0');
+            setTimeout(() => notification.classList.add('opacity-0'), 4000);
+        }
 
         function toggleTheme() {
             const currentTheme = document.documentElement.dataset.theme || (localStorage.getItem('theme') || 'dark');
