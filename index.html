@@ -515,9 +515,17 @@
                 loginSubmit.textContent = 'Logging in...';
                 
                 try {
+                    console.log('Attempting login with email:', email);
+                    console.log('Auth instance:', auth);
+                    console.log('Firebase app:', app);
                     await signInWithEmailAndPassword(auth, email, password);
+                    console.log('Login successful!');
                 } catch (error) {
-                    console.error('Login error:', error);
+                    console.error('Login error details:', {
+                        code: error.code,
+                        message: error.message,
+                        fullError: error
+                    });
                     let errorMessage = 'Login failed. ';
                     if (error.code === 'auth/invalid-email') {
                         errorMessage += 'Invalid email address.';
@@ -530,9 +538,9 @@
                     } else if (error.code === 'auth/network-request-failed') {
                         errorMessage += 'Network error. Please check your connection.';
                     } else if (error.code === 'auth/unauthorized-domain' || error.message.includes('requests-from-referer') || error.message.includes('are-blocked')) {
-                        errorMessage += 'This domain is not authorized. Please add "localhost" to Firebase Console → Authentication → Settings → Authorized domains.';
+                        errorMessage += 'Domain not authorized. Try: 1) Hard refresh (Ctrl+Shift+R), 2) Clear browser cache, 3) Verify localhost is in Firebase authorized domains.';
                     } else {
-                        errorMessage += error.message || 'Please check your credentials.';
+                        errorMessage += `Error: ${error.code || 'Unknown'} - ${error.message || 'Please check your credentials.'}`;
                     }
                     loginError.textContent = errorMessage;
                 } finally {
