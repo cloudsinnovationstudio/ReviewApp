@@ -212,6 +212,8 @@
             recentlyClaimed: []
         };
         let dataListenersAttached = false;
+        let reviewsLoaded = false;
+        let rewardsLoaded = false;
 
         // --- DOM Elements ---
         const loginOverlay = document.getElementById('login-overlay');
@@ -234,13 +236,22 @@
                     userId = user.uid;
                     loginOverlay.style.display = 'none';
                     appContainer.style.display = 'flex';
+                    // Reset loading state
+                    loadingDiv.style.display = 'block';
+                    reviewsLoaded = false;
+                    rewardsLoaded = false;
                     if (!dataListenersAttached) {
                         setupDataListeners();
                         dataListenersAttached = true;
+                    } else {
+                        // If listeners already attached, trigger a render check
+                        checkAndRender();
                     }
                 } else {
                     userId = null;
                     dataListenersAttached = false;
+                    reviewsLoaded = false;
+                    rewardsLoaded = false;
                     loginOverlay.style.display = 'flex';
                     appContainer.style.display = 'none';
                     mainContent.innerHTML = ''; 
@@ -250,15 +261,54 @@
         
         // --- Data Listeners ---
         function setupDataListeners() {
-            onSnapshot(collection(db, "reviews"), (snapshot) => {
-                state.reviews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                render(); 
-            });
+            // Track when both listeners have fired at least once
+            reviewsLoaded = false;
+            rewardsLoaded = false;
 
-            onSnapshot(doc(db, "metadata", "claimedRewards"), (doc) => {
-                state.claimedRewardIds = doc.exists() ? doc.data().ids || [] : [];
+            onSnapshot(collection(db, "reviews"), 
+                (snapshot) => {
+                    state.reviews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    reviewsLoaded = true;
+                    checkAndRender();
+                },
+                (error) => {
+                    console.error('Error loading reviews:', error);
+                    reviewsLoaded = true; // Mark as loaded even on error to prevent infinite loading
+                    checkAndRender();
+                }
+            );
+
+            onSnapshot(doc(db, "metadata", "claimedRewards"), 
+                (docSnapshot) => {
+                    state.claimedRewardIds = docSnapshot.exists() ? docSnapshot.data().ids || [] : [];
+                    rewardsLoaded = true;
+                    checkAndRender();
+                },
+                (error) => {
+                    console.error('Error loading claimed rewards:', error);
+                    // If document doesn't exist, that's okay - just use empty array
+                    state.claimedRewardIds = [];
+                    rewardsLoaded = true;
+                    checkAndRender();
+                }
+            );
+
+            // Fallback: hide loading after 10 seconds even if listeners haven't fired
+            setTimeout(() => {
+                if (!reviewsLoaded || !rewardsLoaded) {
+                    console.warn('Data loading timeout - rendering with available data');
+                    reviewsLoaded = true;
+                    rewardsLoaded = true;
+                    checkAndRender();
+                }
+            }, 10000);
+        }
+
+        function checkAndRender() {
+            // Only render when both listeners have fired at least once
+            if (reviewsLoaded && rewardsLoaded) {
                 render();
-            });
+            }
         }
 
         // --- Core Render Function ---
