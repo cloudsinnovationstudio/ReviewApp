@@ -513,9 +513,11 @@
                 console.error('Error adding review:', error);
                 let errorMsg = 'Failed to add review. ';
                 if (error.code === 'permission-denied') {
-                    errorMsg += 'You do not have permission to add reviews. Check Firestore security rules.';
+                    errorMsg += 'Permission denied. Check: 1) Firestore security rules allow writes, 2) Disable ad blockers that may block Firestore requests.';
                 } else if (error.code === 'unavailable') {
                     errorMsg += 'Service temporarily unavailable. Please try again.';
+                } else if (error.message && error.message.includes('ERR_BLOCKED_BY_CLIENT')) {
+                    errorMsg += 'Request blocked by browser extension/ad blocker. Disable ad blockers for this site and try again.';
                 } else {
                     errorMsg += error.message || 'Please try again.';
                 }
