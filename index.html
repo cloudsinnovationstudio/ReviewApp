@@ -529,8 +529,8 @@
                         errorMessage += 'Incorrect password.';
                     } else if (error.code === 'auth/network-request-failed') {
                         errorMessage += 'Network error. Please check your connection.';
-                    } else if (error.code === 'auth/unauthorized-domain') {
-                        errorMessage += 'This domain is not authorized. Please add localhost to Firebase authorized domains.';
+                    } else if (error.code === 'auth/unauthorized-domain' || error.message.includes('requests-from-referer') || error.message.includes('are-blocked')) {
+                        errorMessage += 'This domain is not authorized. Please add "localhost" to Firebase Console → Authentication → Settings → Authorized domains.';
                     } else {
                         errorMessage += error.message || 'Please check your credentials.';
                     }
